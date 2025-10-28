@@ -5,22 +5,20 @@ public class GridManager : MonoBehaviour
     [Header("Configurações da Grade")]
     public int gridWidth = 20; // Largura da grade em células
     public int gridHeight = 20; // Altura da grade em células
-    public float cellSize = 1f; // Tamanho de cada célula (ajuste para combinar com seus assets)
+    public float cellSize = 1f; // Tamanho de cada célula
 
     [Header("Prefabs dos Itens")]
-    public GameObject[] itemPrefabs; // Array de prefabs para itens 0-8 (atribua no Inspector)
+    public GameObject[] itemPrefabs; // Prefabs para itens 0-8
+    public GameObject cursorPrefab; // Cursor visual
+    public GameObject cellOutlinePrefab; // Outline das células
 
-    public GameObject cursorPrefab; // Prefab do cursor visual
-    public GameObject cellOutlinePrefab; // Prefab para outline das células
-
-    private bool[,] occupiedCells; // Array para rastrear células ocupadas
-    private GameObject[,] grid; // Array para armazenar os objetos colocados
-    private int selectedObject = 0;
+    private bool[,] occupiedCells;
+    private GameObject[,] grid;
     private int cursorX = 0;
     private int cursorY = 0;
     private GameObject cursorInstance;
 
-    public static GridManager Instance { get; private set; } // Singleton pattern
+    public static GridManager Instance { get; private set; }
 
     void Awake()
     {
@@ -31,55 +29,74 @@ public class GridManager : MonoBehaviour
         else if (Instance != this)
         {
             Destroy(gameObject);
+            return;
         }
     }
 
     void Start()
     {
-        occupiedCells = new bool[gridWidth, gridHeight]; // Inicializa todas como falsas (livres)
-        grid = new GameObject[gridWidth, gridHeight]; // Inicializa o grid de objetos
+        // Inicializa arrays
+        occupiedCells = new bool[gridWidth, gridHeight];
+        grid = new GameObject[gridWidth, gridHeight];
 
-        // Cria o cursor visual
-        cursorInstance = Instantiate(cursorPrefab, Vector3.zero, Quaternion.identity);
-        cursorInstance.transform.localScale = Vector3.one * cellSize;
-
-        // Cria os outlines das células uma única vez
-        for (int x = 0; x < gridWidth; x++)
+        // Cria cursor
+        if (cursorPrefab != null)
         {
-            for (int y = 0; y < gridHeight; y++)
+            cursorInstance = Instantiate(cursorPrefab, Vector3.zero, Quaternion.identity);
+            cursorInstance.transform.localScale = Vector3.one * cellSize;
+        }
+        else
+        {
+            Debug.LogError("CursorPrefab não atribuído no GridManager!");
+        }
+
+        // Cria outlines das células
+        if (cellOutlinePrefab != null)
+        {
+            for (int x = 0; x < gridWidth; x++)
             {
-                Vector3 pos = new Vector3(x * cellSize, y * cellSize, 1); // Z=1 para não cobrir sprites
-                Instantiate(cellOutlinePrefab, pos, Quaternion.identity, transform);
+                for (int y = 0; y < gridHeight; y++)
+                {
+                    Vector3 pos = new Vector3(x * cellSize, y * cellSize, 1);
+                    Instantiate(cellOutlinePrefab, pos, Quaternion.identity, transform);
+                }
             }
+        }
+        else
+        {
+            Debug.LogError("CellOutlinePrefab não atribuído!");
         }
     }
 
     void Update()
     {
-        // Seleciona objeto (1–9, assumindo até 9 itens)
-        for (int i = 0; i < itemPrefabs.Length; i++)
-        {
-            if (Input.GetKeyDown((i + 1).ToString()))
-                selectedObject = i;
-        }
-
-        // Movimenta cursor
+        // === MOVIMENTAÇÃO DO CURSOR ===
         if (Input.GetKeyDown(KeyCode.UpArrow)) cursorY = Mathf.Clamp(cursorY + 1, 0, gridHeight - 1);
         if (Input.GetKeyDown(KeyCode.DownArrow)) cursorY = Mathf.Clamp(cursorY - 1, 0, gridHeight - 1);
         if (Input.GetKeyDown(KeyCode.LeftArrow)) cursorX = Mathf.Clamp(cursorX - 1, 0, gridWidth - 1);
         if (Input.GetKeyDown(KeyCode.RightArrow)) cursorX = Mathf.Clamp(cursorX + 1, 0, gridWidth - 1);
 
-        // Atualiza posição do cursor visual (2D)
-        cursorInstance.transform.position = new Vector3(cursorX * cellSize, cursorY * cellSize, 0);
-
-        // Coloca objeto na célula atual se não ocupada
-        if (Input.GetKeyDown(KeyCode.Space))
+        // Atualiza posição do cursor (com proteção contra null)
+        if (cursorInstance != null)
         {
-            PlaceItem(cursorX, cursorY, selectedObject);
+            cursorInstance.transform.position = new Vector3(cursorX * cellSize, cursorY * cellSize, 0);
         }
 
-        // Remove objeto
-        if (Input.GetKeyDown(KeyCode.Delete))
+        // === COLOCAR ITEM ===
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            if (GameManager.Instance != null && GameManager.Instance.selectedItemIndex >= 0)
+            {
+                GameManager.Instance.TryPlaceItem(cursorX, cursorY, GameManager.Instance.selectedItemIndex);
+            }
+            else
+            {
+                Debug.Log("Nenhum item selecionado para colocar!");
+            }
+        }
+
+        // === REMOVER ITEM ===
+        if (Input.GetKeyDown(KeyCode.Delete) || Input.GetKeyDown(KeyCode.Backspace))
         {
             RemoveItem(cursorX, cursorY);
         }
@@ -91,31 +108,72 @@ public class GridManager : MonoBehaviour
         {
             return occupiedCells[x, y];
         }
-        return true; // Fora dos limites = considerado ocupado
+        return true; // Fora dos limites = ocupado
     }
 
     public void PlaceItem(int x, int y, int itemIndex)
     {
-        if (IsCellOccupied(x, y)) return; // Não coloca se já ocupado
+        // Validações de segurança
+        if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight)
+        {
+            Debug.LogWarning($"Posição inválida: ({x}, {y})");
+            return;
+        }
+
+        if (IsCellOccupied(x, y))
+        {
+            Debug.Log($"Célula ({x}, {y}) já está ocupada!");
+            return;
+        }
 
         if (itemIndex < 0 || itemIndex >= itemPrefabs.Length || itemPrefabs[itemIndex] == null)
         {
-            Debug.LogWarning("Prefab de item inválido ou não atribuído!");
+            Debug.LogWarning($"Prefab inválido no índice {itemIndex}");
             return;
         }
 
         Vector3 pos = new Vector3(x * cellSize, y * cellSize, 0);
         grid[x, y] = Instantiate(itemPrefabs[itemIndex], pos, Quaternion.identity);
         occupiedCells[x, y] = true;
+
+        Debug.Log($"Item {itemIndex} colocado em ({x}, {y})");
     }
 
     public void RemoveItem(int x, int y)
     {
-        if (!IsCellOccupied(x, y)) return;
+        if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight)
+            return;
 
-        Destroy(grid[x, y]);
-        grid[x, y] = null;
+        if (!occupiedCells[x, y])
+            return;
+
+        if (grid[x, y] != null)
+        {
+            Destroy(grid[x, y]);   // Destroi o objeto
+            grid[x, y] = null;     // ← ESSENCIAL: limpa a referência
+        }
+
         occupiedCells[x, y] = false;
+        Debug.Log($"Item removido em ({x}, {y})");
+    }
+
+    // Opcional: Retorna o item na posição (útil para UI ou save)
+    public GameObject GetItemAt(int x, int y)
+    {
+        if (x >= 0 && x < gridWidth && y >= 0 && y < gridHeight)
+            return grid[x, y];
+        return null;
+    }
+
+    // Opcional: Limpa toda a grade (útil para reset)
+    public void ClearGrid()
+    {
+        for (int x = 0; x < gridWidth; x++)
+        {
+            for (int y = 0; y < gridHeight; y++)
+            {
+                RemoveItem(x, y);
+            }
+        }
     }
 }
- 
