@@ -2,45 +2,131 @@ using UnityEngine;
 
 public class MouseManager : MonoBehaviour
 {
-    [Header("ConfiguraÁıes de Arrasto")]
-    public float dragSpeed = 0.1f; // Velocidade do arrasto da c‚mera (ajuste no Inspector)
-    public float dragThreshold = 5f; // Dist‚ncia mÌnima para considerar arrasto (evita mudanÁas acidentais)
+    public static MouseManager Instance { get; private set; } // Singleton
 
-    private bool dragMode = false; // Modo de arrasto ativado?
-    private bool isDragging = false; // Est· arrastando agora?
+    public enum MouseMode { Place, Drag, Delete }
+
+    [Header("Configura√ß√µes")]
+    public float dragSpeed = 0.1f; // Velocidade do arrasto da c√¢mera (ajuste no Inspector)
+    public float dragThreshold = 5f; // Dist√¢ncia m√≠nima para considerar arrasto (evita mudan√ßas acidentais)
+
+    [Header("Visual do Cursor no Grid")]
+    public Transform gridCursor; // Arraste um GameObject (ex: Sprite) para ser o indicador de c√©lula
+    public bool clampToGridBounds = true; // Mant√©m o cursor dentro dos limites da grade
+    public float gridCursorZ = 0f; // Z para posicionar o visual do cursor
+    public SpriteRenderer gridCursorRenderer; // Opcional: definir cor/ordem do visual
+    public Color freeCellColor = new Color(0f, 1f, 0f, 0.35f);
+    public Color occupiedCellColor = new Color(1f, 0f, 0f, 0.35f);
+    public bool matchCellSize = true; // Ajustar o tamanho do visual √† c√©lula
+    public string gridCursorSortingLayer = "Default";
+    public int gridCursorSortingOrder = 1000; // alto para ficar na frente
+
+    // Estado para respeitar regras do grid
+    private Vector2Int lastFreeCell;
+    private bool hasLastFreeCell = false;
+
+    private MouseMode currentMode = MouseMode.Place;
+    private bool isDragging = false;
     private Vector3 lastMousePosition;
+
+    void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
 
     void Update()
     {
-        // Toggle modo de arrasto com Space
+        // Toggle modos com atalhos
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            dragMode = true;
-            CursorManager.Instance.SetMoveCursor();
-            Debug.Log("Modo de arrasto ativado (cursor 'move').");
+            SetMode(MouseMode.Drag);
         }
 
-        // Sai do modo de arrasto com V
         if (Input.GetKeyDown(KeyCode.V))
         {
-            dragMode = false;
-            CursorManager.Instance.SetNormalCursor();
-            Debug.Log("Modo de arrasto desativado (cursor normal).");
+            SetMode(MouseMode.Place);
         }
 
-        // ObtÈm posiÁ„o do mouse
+        // Obt√©m posi√ß√£o do mouse
         Vector3 mousePos = Input.mousePosition;
         Vector3 worldPos = Camera.main.ScreenToWorldPoint(mousePos);
         int x = Mathf.FloorToInt(worldPos.x / GridManager.Instance.cellSize);
         int y = Mathf.FloorToInt(worldPos.y / GridManager.Instance.cellSize);
 
-        // LÛgica baseada no modo
-        if (dragMode)
+        bool isDeleteMode = (currentMode == MouseMode.Delete);
+
+        // Atualiza visual do cursor alinhado ao grid
+        if (gridCursor != null && GridManager.Instance != null && Camera.main != null)
         {
-            // Modo de arrasto: N„o coloca itens, apenas arrasta c‚mera
+            int gx = x;
+            int gy = y;
+            if (clampToGridBounds)
+            {
+                gx = Mathf.Clamp(gx, 0, GridManager.Instance.gridWidth - 1);
+                gy = Mathf.Clamp(gy, 0, GridManager.Instance.gridHeight - 1);
+            }
+
+            float cs = GridManager.Instance.cellSize;
+            bool insideBounds = gx >= 0 && gx < GridManager.Instance.gridWidth && gy >= 0 && gy < GridManager.Instance.gridHeight;
+
+            // Determina c√©lula alvo respeitando ocupadas e modo
+            bool targetOccupied = insideBounds && GridManager.Instance.IsCellOccupied(gx, gy);
+            bool isValid = insideBounds && (isDeleteMode ? targetOccupied : !targetOccupied);
+            Vector2Int cellToShow;
+            if (isValid)
+            {
+                cellToShow = new Vector2Int(gx, gy);
+                hasLastFreeCell = true;
+                lastFreeCell = cellToShow;
+            }
+            else if (hasLastFreeCell)
+            {
+                cellToShow = lastFreeCell;
+            }
+            else
+            {
+                cellToShow = new Vector2Int(Mathf.Clamp(gx, 0, GridManager.Instance.gridWidth - 1), Mathf.Clamp(gy, 0, GridManager.Instance.gridHeight - 1));
+            }
+
+            Vector3 snapped = new Vector3(cellToShow.x * cs + cs * 0.5f, cellToShow.y * cs + cs * 0.5f, gridCursorZ);
+            gridCursor.position = snapped;
+
+            if (matchCellSize)
+            {
+                gridCursor.localScale = new Vector3(cs, cs, 1f);
+            }
+
+            if (gridCursorRenderer != null)
+            {
+                gridCursorRenderer.color = isValid ? freeCellColor : occupiedCellColor;
+                gridCursorRenderer.sortingLayerName = gridCursorSortingLayer;
+                gridCursorRenderer.sortingOrder = gridCursorSortingOrder;
+            }
+
+            // Visibilidade baseada em limites
+            if (insideBounds)
+            {
+                if (!gridCursor.gameObject.activeSelf) gridCursor.gameObject.SetActive(true);
+            }
+            else
+            {
+                if (gridCursor.gameObject.activeSelf) gridCursor.gameObject.SetActive(false);
+            }
+        }
+
+        // L√≥gica baseada no modo
+        if (currentMode == MouseMode.Drag)
+        {
             if (Input.GetMouseButtonDown(0))
             {
-                CursorManager.Instance.SetMoveCursor();
+                CursorManager.Instance.SetOnMoveCursor();
                 isDragging = true;
                 lastMousePosition = mousePos;
             }
@@ -48,12 +134,8 @@ public class MouseManager : MonoBehaviour
             if (Input.GetMouseButton(0) && isDragging)
             {
                 Vector3 delta = mousePos - lastMousePosition;
-                if (delta.magnitude > dragThreshold)
-                {
-                    CursorManager.Instance.SetOnMoveCursor();
-                    // Arraste a c‚mera na direÁ„o oposta ao movimento do mouse
-                    Camera.main.transform.position -= new Vector3(delta.x * dragSpeed, delta.y * dragSpeed, 0);
-                }
+                // Arraste a c√¢mera na dire√ß√£o oposta ao movimento do mouse
+                Camera.main.transform.position -= new Vector3(delta.x * dragSpeed, delta.y * dragSpeed, 0);
                 lastMousePosition = mousePos;
             }
 
@@ -65,23 +147,56 @@ public class MouseManager : MonoBehaviour
         }
         else
         {
-            // Modo normal: Coloca itens na grade
             if (Input.GetMouseButtonDown(0))
             {
-                // Verifica limites da grade
                 if (x >= 0 && x < GridManager.Instance.gridWidth && y >= 0 && y < GridManager.Instance.gridHeight)
                 {
-                    int selected = GameManager.Instance.selectedItemIndex;
-                    if (selected >= 0)
+                    if (currentMode == MouseMode.Place)
                     {
-                        GameManager.Instance.TryPlaceItem(x, y, selected);
+                        int selected = GameManager.Instance.selectedItemIndex;
+                        if (selected >= 0)
+                        {
+                            GameManager.Instance.TryPlaceItem(x, y, selected);
+                        }
+                        else
+                        {
+                            Debug.Log("Nenhum item selecionado! Configure via UI ou Inspector.");
+                        }
                     }
-                    else
+                    else if (currentMode == MouseMode.Delete)
                     {
-                        Debug.Log("Nenhum item selecionado! Configure via UI ou Inspector.");
+                        if (GridManager.Instance.IsCellOccupied(x, y))
+                        {
+                            GridManager.Instance.RemoveItem(x, y);
+                        }
+                        else
+                        {
+                            Debug.Log("Nada para remover nesta c√©lula!");
+                        }
                     }
                 }
             }
         }
+    }
+
+    public void SetMode(MouseMode mode)
+    {
+        currentMode = mode;
+        if (mode == MouseMode.Drag)
+        {
+            CursorManager.Instance.SetMoveCursor();
+            Debug.Log("Modo de arrasto ativado (cursor 'move').");
+        }
+        else if (mode == MouseMode.Place)
+        {
+            CursorManager.Instance.SetNormalCursor();
+            Debug.Log("Modo de coloca√ß√£o ativado (cursor normal).");
+        }
+        else if (mode == MouseMode.Delete)
+        {
+            CursorManager.Instance.SetTrashCursor();
+            Debug.Log("Modo de remo√ß√£o ativado (cursor 'trash').");
+        }
+        isDragging = false;
     }
 }

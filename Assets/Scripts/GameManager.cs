@@ -5,7 +5,7 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
-    [Header("Referências")]
+    [Header("ReferÃªncias")]
     public GridManager gridManager;
     public MouseManager mouseManager;
     public TextMeshProUGUI moneyText; // UI para exibir dinheiro
@@ -35,12 +35,12 @@ public class GameManager : MonoBehaviour
 
         if (gridManager == null)
         {
-            Debug.LogError("GridManager não configurado no GameManager!");
+            Debug.LogError("GridManager nÃ£o configurado no GameManager!");
         }
 
         if (mouseManager == null)
         {
-            Debug.LogError("MouseManager não configurado no GameManager!");
+            Debug.LogError("MouseManager nÃ£o configurado no GameManager!");
         }
     }
 
@@ -48,15 +48,15 @@ public class GameManager : MonoBehaviour
     {
         if (itemIndex < 0 || itemIndex >= itemCosts.Length)
         {
-            Debug.LogWarning("Índice de item inválido!");
+            Debug.LogWarning("Ãndice de item invÃ¡lido!");
             return;
         }
 
         int cost = itemCosts[itemIndex];
         if (currentMoney >= cost && !gridManager.IsCellOccupied(x, y))
         {
-            Vector3 pos = new Vector3(x * gridManager.cellSize + gridManager.cellSize / 2, y * gridManager.cellSize + gridManager.cellSize / 2, 0);
-            gridManager.PlaceItem(x, y, itemIndex, pos);
+            // Chama PlaceItem com 3 argumentos (x, y, itemIndex)
+            gridManager.PlaceItem(x, y, itemIndex);
             currentMoney -= cost;
             UpdateMoneyUI();
             Debug.Log($"Item {itemIndex + 1} colocado em ({x}, {y}) por {cost} moedas.");
@@ -67,7 +67,7 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            Debug.Log("Célula já ocupada!");
+            Debug.Log("CÃ©lula jÃ¡ ocupada!");
         }
     }
 
@@ -76,8 +76,6 @@ public class GameManager : MonoBehaviour
         if (index >= 0 && index < itemCosts.Length)
         {
             selectedItemIndex = index;
-            // Opcional: Troca cursor para item (descomente se quiser)
-            // CursorManager.Instance.ChangeCursorForItem(index);
             Debug.Log($"Item selecionado: {selectedItemIndex + 1}");
         }
     }
@@ -96,3 +94,4 @@ public class GameManager : MonoBehaviour
         }
     }
 }
+ 

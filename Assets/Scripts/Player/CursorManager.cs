@@ -2,13 +2,15 @@ using UnityEngine;
 
 public class CursorManager : MonoBehaviour
 {
-    [Header("ConfiguraÁıes do Cursor")]
+    [Header("Configura√ß√µes do Cursor")]
     public Texture2D normalCursorTexture; // Textura do cursor normal (seta)
     public Vector2 normalHotSpot = Vector2.zero;
-    public Texture2D moveCursorTexture; // Textura "move" (m„o aberta)
-    public Vector2 moveHotSpot = new Vector2(16f, 16f); // Ajuste para centro se necess·rio
-    public Texture2D onMoveCursorTexture; // Textura "onmove" (m„o fechada)
-    public Vector2 onMoveHotSpot = new Vector2(16f, 16f); // Ajuste para centro se necess·rio
+    public Texture2D moveCursorTexture; // Textura "move" (m√£o aberta)
+    public Vector2 moveHotSpot = new Vector2(16f, 16f); // Ajuste para centro se necess√°rio
+    public Texture2D onMoveCursorTexture; // Textura "onmove" (m√£o fechada)
+    public Vector2 onMoveHotSpot = new Vector2(16f, 16f); // Ajuste para centro se necess√°rio
+    public Texture2D trashCursorTexture; // Textura "trash" (lixeira)
+    public Vector2 trashHotSpot = new Vector2(16f, 16f); // Ajuste para centro se necess√°rio
     public CursorMode cursorMode = CursorMode.Auto; // Mude para ForceSoftware se houver problemas
 
     public static CursorManager Instance { get; private set; } // Singleton
@@ -42,7 +44,7 @@ public class CursorManager : MonoBehaviour
         }
         else
         {
-            Debug.LogError("Textura normal do cursor n„o atribuÌda!");
+            Debug.LogError("Textura normal do cursor n√£o atribu√≠da!");
         }
     }
 
@@ -55,7 +57,7 @@ public class CursorManager : MonoBehaviour
         }
         else
         {
-            Debug.LogError("Textura 'move' do cursor n„o atribuÌda!");
+            Debug.LogError("Textura 'move' do cursor n√£o atribu√≠da!");
         }
     }
 
@@ -68,11 +70,24 @@ public class CursorManager : MonoBehaviour
         }
         else
         {
-            Debug.LogError("Textura 'onmove' do cursor n„o atribuÌda!");
+            Debug.LogError("Textura 'onmove' do cursor n√£o atribu√≠da!");
         }
     }
 
-    // Opcional: Resetar para padr„o do sistema
+    public void SetTrashCursor()
+    {
+        if (trashCursorTexture != null)
+        {
+            Cursor.SetCursor(trashCursorTexture, trashHotSpot, cursorMode);
+            Debug.Log("Cursor 'trash' aplicado.");
+        }
+        else
+        {
+            Debug.LogError("Textura 'trash' do cursor n√£o atribu√≠da!");
+        }
+    }
+
+    // Opcional: Resetar para padr√£o do sistema
     public void ResetToDefaultCursor()
     {
         Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
@@ -81,7 +96,7 @@ public class CursorManager : MonoBehaviour
     // Opcional: Trocar cursor por item selecionado (integre ao GameManager se quiser)
     public void ChangeCursorForItem(int itemIndex)
     {
-        // Aqui vocÍ pode adicionar lÛgica para cursors especÌficos por item, se necess·rio
+        // Aqui voc√™ pode adicionar l√≥gica para cursors espec√≠ficos por item, se necess√°rio
         SetNormalCursor(); // Exemplo: Volta para normal
     }
 }
