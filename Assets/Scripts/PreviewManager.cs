@@ -5,15 +5,8 @@ public class PreviewManager : MonoBehaviour
 {
     public static PreviewManager Instance { get; private set; }
 
-    [Header("=== PREFABS DAS LOJAS (ARRASTE AQUI) ===")]
-    [Tooltip("1 - Hamburgueria")]
-    public GameObject hamburgueriaPrefab;
-    [Tooltip("2 - Padaria")]
-    public GameObject padariaPrefab;
-    [Tooltip("3 - Abibas")]
-    public GameObject abibasPrefab;
-    [Tooltip("4 - Arcade Alley")]
-    public GameObject arcadeAlleyPrefab;
+    [Header("=== PREFABS DAS LOJAS ===")]
+    public GameObject[] storePrefabsArray = new GameObject[4];
 
     [Header("Configurações Visuais")]
     public float storeScale = 0.7f;
@@ -23,19 +16,17 @@ public class PreviewManager : MonoBehaviour
     public Color validColor = new Color(1f, 1f, 1f, 0.3f);
     public Color invalidColor = new Color(1f, 0.3f, 0.3f, 0.3f);
 
-    [Header("UI Feedback (Opcional)")]
+    [Header("UI Feedback")]
     public TextMeshProUGUI storeNameText;
     public TextMeshProUGUI costWarningText;
 
     private GameObject previewInstance;
     private int currentPreviewIndex = -1;
     private float lastSelectionTime = 0f;
-    private int lastSelectedIndex = -1;
     private const float DOUBLE_TAP_THRESHOLD = 0.3f;
 
-    private GameObject[] storePrefabs;
     private readonly string[] storeNames = { "Hamburgueria", "Padaria", "Abibas", "Arcade Alley" };
-    private readonly int[] storeCosts = { 150, 50, 100, 300 }; // CORRIGIDO: Padaria=50, Abibas=100
+    private readonly int[] storeCosts = { 150, 50, 100, 300 };
 
     void Awake()
     {
@@ -47,21 +38,36 @@ public class PreviewManager : MonoBehaviour
         {
             Destroy(gameObject);
         }
-
-        storePrefabs = new GameObject[] { hamburgueriaPrefab, padariaPrefab, abibasPrefab, arcadeAlleyPrefab };
     }
 
     void Start()
     {
         HidePreview();
         UpdateStoreUI();
+
+        // FORÇA SINCRONIZAÇÃO COM GRIDMANAGER
+        if (GridManager.Instance != null && GridManager.Instance.itemPrefabs != null)
+        {
+            for (int i = 0; i < Mathf.Min(storePrefabsArray.Length, GridManager.Instance.itemPrefabs.Length); i++)
+            {
+                if (storePrefabsArray[i] == null && GridManager.Instance.itemPrefabs[i] != null)
+                {
+                    storePrefabsArray[i] = GridManager.Instance.itemPrefabs[i];
+                    Debug.Log($"[PreviewManager] Prefab sincronizado: {storeNames[i]}");
+                }
+            }
+        }
+        else
+        {
+            Debug.LogError("[PreviewManager] GridManager ou itemPrefabs é null! Verifique a cena.");
+        }
     }
 
     void Update()
     {
         HandleStoreSelection();
         HandleCancelInput();
-        HandleAddMoney(); // NOVA FUNÇÃO
+        HandleAddMoney();
         UpdatePreviewPosition();
     }
 
@@ -76,7 +82,6 @@ public class PreviewManager : MonoBehaviour
         if (index != -1)
         {
             float timeSinceLast = Time.time - lastSelectionTime;
-
             if (currentPreviewIndex == index && timeSinceLast < DOUBLE_TAP_THRESHOLD)
             {
                 CancelSelection();
@@ -85,9 +90,7 @@ public class PreviewManager : MonoBehaviour
             {
                 SelectStore(index);
             }
-
             lastSelectionTime = Time.time;
-            lastSelectedIndex = index;
         }
     }
 
@@ -99,7 +102,7 @@ public class PreviewManager : MonoBehaviour
         }
     }
 
-    private void HandleAddMoney() // NOVA FUNÇÃO
+    private void HandleAddMoney()
     {
         if (Input.GetKeyDown(KeyCode.Y))
         {
@@ -110,15 +113,15 @@ public class PreviewManager : MonoBehaviour
 
     public void SelectStore(int storeIndex)
     {
-        if (storeIndex < 0 || storeIndex >= storePrefabs.Length)
+        if (storeIndex < 0 || storeIndex >= storePrefabsArray.Length)
         {
             Debug.LogWarning($"Índice de loja inválido: {storeIndex}");
             return;
         }
 
-        if (storePrefabs[storeIndex] == null)
+        if (storePrefabsArray[storeIndex] == null)
         {
-            Debug.LogError($"Prefab da loja {storeNames[storeIndex]} não foi atribuído no Inspector!");
+            Debug.LogError($"Prefab da loja {storeNames[storeIndex]} (índice {storeIndex}) não foi atribuído!");
             return;
         }
 
@@ -127,16 +130,15 @@ public class PreviewManager : MonoBehaviour
 
         if (!canAfford)
         {
-            ShowCostWarning();
+            ShowWarning("Dinheiro insuficiente!");
             return;
         }
 
         currentPreviewIndex = storeIndex;
         GameManager.Instance?.SetSelectedItem(storeIndex);
-
         CreatePreview();
         UpdateStoreUI();
-        HideCostWarning();
+        HideWarning();
 
         Debug.Log($"Loja selecionada: {storeNames[storeIndex]} (Custo: ${cost})");
     }
@@ -144,24 +146,20 @@ public class PreviewManager : MonoBehaviour
     public void CancelSelection()
     {
         if (currentPreviewIndex == -1) return;
-
-        Debug.Log($"Seleção cancelada: {storeNames[currentPreviewIndex]}");
         GameManager.Instance?.SetSelectedItem(-1);
         HidePreview();
     }
 
     private void CreatePreview()
     {
-        if (previewInstance != null)
-            Destroy(previewInstance);
+        if (previewInstance != null) Destroy(previewInstance);
 
-        GameObject prefab = storePrefabs[currentPreviewIndex];
+        GameObject prefab = storePrefabsArray[currentPreviewIndex];
         if (prefab == null) return;
 
         previewInstance = Instantiate(prefab, Vector3.zero, Quaternion.identity);
         previewInstance.name = "StorePreview";
         previewInstance.transform.localScale = Vector3.one * storeScale;
-
         ApplyGhostEffect(previewInstance);
     }
 
@@ -176,14 +174,10 @@ public class PreviewManager : MonoBehaviour
                 sprite.color = c;
             }
         }
-
-        foreach (var col in obj.GetComponentsInChildren<Collider2D>())
-            col.enabled = false;
-
+        foreach (var col in obj.GetComponentsInChildren<Collider2D>()) col.enabled = false;
         foreach (var script in obj.GetComponentsInChildren<MonoBehaviour>())
         {
-            if (script.GetType() != typeof(Transform))
-                script.enabled = false;
+            if (script.GetType() != typeof(Transform)) script.enabled = false;
         }
     }
 
@@ -191,8 +185,7 @@ public class PreviewManager : MonoBehaviour
     {
         if (previewInstance == null || GridManager.Instance == null || Camera.main == null) return;
 
-        Vector3 mousePos = Input.mousePosition;
-        Vector3 worldPos = Camera.main.ScreenToWorldPoint(mousePos);
+        Vector3 worldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         worldPos.z = 0;
 
         float cellSize = GridManager.Instance.cellSize;
@@ -221,32 +214,26 @@ public class PreviewManager : MonoBehaviour
     {
         if (storeNameText != null)
         {
-            if (currentPreviewIndex >= 0 && currentPreviewIndex < storeNames.Length)
-            {
-                storeNameText.text = $"{storeNames[currentPreviewIndex]} - Custo: ${storeCosts[currentPreviewIndex]}";
-            }
-            else
-            {
-                storeNameText.text = "Selecione uma loja (1-4)";
-            }
+            storeNameText.text = currentPreviewIndex >= 0
+                ? $"{storeNames[currentPreviewIndex]} - Custo: ${storeCosts[currentPreviewIndex]}"
+                : "Selecione uma loja (1-4)";
         }
     }
 
-    private void ShowCostWarning()
+    public void ShowWarning(string message)
     {
         if (costWarningText != null)
         {
-            costWarningText.text = "Dinheiro insuficiente!";
+            costWarningText.text = message;
             costWarningText.gameObject.SetActive(true);
-            CancelInvoke(nameof(HideCostWarning));
-            Invoke(nameof(HideCostWarning), 2f);
+            CancelInvoke(nameof(HideWarning));
+            Invoke(nameof(HideWarning), 2f);
         }
     }
 
-    private void HideCostWarning()
+    private void HideWarning()
     {
-        if (costWarningText != null)
-            costWarningText.gameObject.SetActive(false);
+        if (costWarningText != null) costWarningText.gameObject.SetActive(false);
     }
 
     public void HidePreview()
@@ -260,13 +247,7 @@ public class PreviewManager : MonoBehaviour
         UpdateStoreUI();
     }
 
-    public float GetStoreScale()
-    {
-        return storeScale;
-    }
+    public float GetStoreScale() => storeScale;
 
-    void OnDestroy()
-    {
-        HidePreview();
-    }
+    void OnDestroy() => HidePreview();
 }

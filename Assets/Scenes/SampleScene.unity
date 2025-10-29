@@ -705,8 +705,8 @@ Camera:
   m_GameObject: {fileID: 519420028}
   m_Enabled: 1
   serializedVersion: 2
-  m_ClearFlags: 2
-  m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
+  m_ClearFlags: 1
+  m_BackGroundColor: {r: 0, g: 0, b: 0, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -731,7 +731,7 @@ Camera:
   far clip plane: 1000
   field of view: 34
   orthographic: 1
-  orthographic size: 5
+  orthographic size: 12
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -756,7 +756,7 @@ Transform:
   m_GameObject: {fileID: 519420028}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 8.51, y: 4.49, z: -10}
+  m_LocalPosition: {x: 10, y: 10, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1157,7 +1157,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dragSpeed: 0.1
-  dragThreshold: 5
   gridCursor: {fileID: 0}
   clampToGridBounds: 1
   gridCursorZ: 0
@@ -1810,7 +1809,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dragSpeed: 0.1
-  dragThreshold: 5
   gridCursor: {fileID: 0}
   clampToGridBounds: 1
   gridCursorZ: 0
@@ -1982,10 +1980,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4a50aecdbbabffa44a169fca13383427, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hamburgueriaPrefab: {fileID: 4827366242457993146}
-  padariaPrefab: {fileID: 4342400221613947069}
-  abibasPrefab: {fileID: 654238986312221751}
-  arcadeAlleyPrefab: {fileID: 8964870213194908901}
+  storePrefabsArray:
+  - {fileID: 4827366242457993146}
+  - {fileID: 4342400221613947069}
+  - {fileID: 654238986312221751}
+  - {fileID: 8964870213194908901}
   storeScale: 0.2
   ghostAlpha: 0.3
   validColor: {r: 1, g: 1, b: 1, a: 0.3}
@@ -2285,7 +2284,7 @@ GameObject:
   - component: {fileID: 2070966357}
   - component: {fileID: 2070966356}
   - component: {fileID: 2070966355}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: GameManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2312,7 +2311,7 @@ MonoBehaviour:
   startingMoney: 100
   selectedItemIndex: 0
   upcoinPrefab: {fileID: 858925341}
-  upcoinScale: 0.6
+  upcoinScale: 1
   upcoinAlpha: 0.4
   floatDuration: 1.2
   floatDistance: 40
@@ -2361,13 +2360,17 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1159893686305551207, guid: 91502e0380602c64e8f514efa2f3185b, type: 3}
+      propertyPath: m_SortingOrder
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 1350088322187175928, guid: 91502e0380602c64e8f514efa2f3185b, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 688.74207
+      value: 89.780334
       objectReference: {fileID: 0}
     - target: {fileID: 1350088322187175928, guid: 91502e0380602c64e8f514efa2f3185b, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -53.763016
+      value: 3.1434784
       objectReference: {fileID: 0}
     - target: {fileID: 1350088322187175928, guid: 91502e0380602c64e8f514efa2f3185b, type: 3}
       propertyPath: m_LocalPosition.z
@@ -2480,13 +2483,17 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 3500021385649097639, guid: ecee132c92945ab488a1072bda9304fa, type: 3}
+      propertyPath: m_SortingOrder
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 4062212289986579105, guid: ecee132c92945ab488a1072bda9304fa, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 531.24866
+      value: 4.9
       objectReference: {fileID: 0}
     - target: {fileID: 4062212289986579105, guid: ecee132c92945ab488a1072bda9304fa, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -14.389679
+      value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 4062212289986579105, guid: ecee132c92945ab488a1072bda9304fa, type: 3}
       propertyPath: m_LocalPosition.z
@@ -2524,6 +2531,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Padaria
       objectReference: {fileID: 0}
+    - target: {fileID: 4451232816068649479, guid: ecee132c92945ab488a1072bda9304fa, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -2546,13 +2557,17 @@ PrefabInstance:
       propertyPath: m_Name
       value: Hamburgueria
       objectReference: {fileID: 0}
+    - target: {fileID: 5619052400899422135, guid: 075c3dace12a8da4f81103fb6cd9e2ba, type: 3}
+      propertyPath: m_SortingOrder
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7434031771689357737, guid: 075c3dace12a8da4f81103fb6cd9e2ba, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 633.96173
+      value: 35
       objectReference: {fileID: 0}
     - target: {fileID: 7434031771689357737, guid: 075c3dace12a8da4f81103fb6cd9e2ba, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -2.4064941
+      value: 54.5
       objectReference: {fileID: 0}
     - target: {fileID: 7434031771689357737, guid: 075c3dace12a8da4f81103fb6cd9e2ba, type: 3}
       propertyPath: m_LocalPosition.z
@@ -2604,13 +2619,17 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 3242812092318400125, guid: c8d8777fafd939b4ba7020c09b83a866, type: 3}
+      propertyPath: m_SortingOrder
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 5110374125445894061, guid: c8d8777fafd939b4ba7020c09b83a866, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 781.1838
+      value: 182.22205
       objectReference: {fileID: 0}
     - target: {fileID: 5110374125445894061, guid: c8d8777fafd939b4ba7020c09b83a866, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -33.220413
+      value: 23.68608
       objectReference: {fileID: 0}
     - target: {fileID: 5110374125445894061, guid: c8d8777fafd939b4ba7020c09b83a866, type: 3}
       propertyPath: m_LocalPosition.z
@@ -2666,6 +2685,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1696842097}
     m_Modifications:
+    - target: {fileID: 459018879977779662, guid: 5a7f4fed32103be468ee5720aa3abe0b, type: 3}
+      propertyPath: m_SortingOrder
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 1322915826719125953, guid: 5a7f4fed32103be468ee5720aa3abe0b, type: 3}
       propertyPath: m_Name
       value: upcoin_0
@@ -2675,12 +2698,20 @@ PrefabInstance:
       value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 3169982409589362211, guid: 5a7f4fed32103be468ee5720aa3abe0b, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 32
+      objectReference: {fileID: 0}
+    - target: {fileID: 3169982409589362211, guid: 5a7f4fed32103be468ee5720aa3abe0b, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 32
+      objectReference: {fileID: 0}
+    - target: {fileID: 3169982409589362211, guid: 5a7f4fed32103be468ee5720aa3abe0b, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 305.06726
+      value: 231
       objectReference: {fileID: 0}
     - target: {fileID: 3169982409589362211, guid: 5a7f4fed32103be468ee5720aa3abe0b, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -269.96808
+      value: 193
       objectReference: {fileID: 0}
     - target: {fileID: 3169982409589362211, guid: 5a7f4fed32103be468ee5720aa3abe0b, type: 3}
       propertyPath: m_LocalPosition.z
@@ -2735,7 +2766,7 @@ SceneRoots:
   - {fileID: 2926178674568635161}
   - {fileID: 1113797740}
   - {fileID: 1637810364}
-  - {fileID: 4342400221613947068}
   - {fileID: 4827366242457993145}
   - {fileID: 654238986312221750}
   - {fileID: 8964870213194908900}
+  - {fileID: 4342400221613947068}

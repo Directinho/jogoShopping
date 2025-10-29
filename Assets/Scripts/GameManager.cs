@@ -2,6 +2,7 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 using System.Collections;
+using UnityEngine.SceneManagement; // Para o Reset com 'R'
 
 public class GameManager : MonoBehaviour
 {
@@ -11,7 +12,7 @@ public class GameManager : MonoBehaviour
     public GridManager gridManager;
     public MouseManager mouseManager;
     public TextMeshProUGUI moneyText;
-    public Canvas hudCanvas; // ARRASTE O CANVAS DO HUD AQUI!
+    public Canvas hudCanvas;
 
     [Header("Sistema de Compras")]
     public int[] itemCosts = { 150, 50, 100, 300 };
@@ -20,7 +21,7 @@ public class GameManager : MonoBehaviour
     public int selectedItemIndex = -1;
 
     [Header("Efeito de Ganho")]
-    public GameObject upcoinPrefab; // upcoin_0
+    public GameObject upcoinPrefab;
     public float upcoinScale = 0.6f;
     public float upcoinAlpha = 0.4f;
     public float floatDuration = 1.2f;
@@ -31,33 +32,69 @@ public class GameManager : MonoBehaviour
         if (Instance == null)
         {
             Instance = this;
+            DontDestroyOnLoad(gameObject);
         }
-        else
+        else if (Instance != this)
         {
             Destroy(gameObject);
+            return;
         }
+
+        // Inicializa dinheiro APÓS garantir que o objeto não será destruído
+        currentMoney = startingMoney;
+        UpdateMoneyUI();
     }
 
     void Start()
     {
-        currentMoney = startingMoney;
-        UpdateMoneyUI();
+        if (gridManager == null) Debug.LogError("GridManager não configurado!");
+        if (mouseManager == null) Debug.LogError("MouseManager não configurado!");
+        if (hudCanvas == null) Debug.LogError("HUD Canvas não atribuído!");
+    }
 
-        if (hudCanvas == null)
-            Debug.LogError("HUD Canvas não atribuído no GameManager!");
+    void Update()
+    {
+        // RESET RÁPIDO PARA TESTES
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        }
     }
 
     public void TryPlaceItem(int x, int y, int itemIndex)
     {
-        if (itemIndex < 0 || itemIndex >= itemCosts.Length) return;
+        if (itemIndex < 0 || itemIndex >= itemCosts.Length)
+        {
+            Debug.LogError($"[GameManager] Índice inválido: {itemIndex}");
+            return;
+        }
 
         int cost = itemCosts[itemIndex];
-        if (currentMoney < cost) return;
-        if (gridManager.IsCellOccupied(x, y)) return;
+        if (currentMoney < cost)
+        {
+            PreviewManager.Instance?.ShowWarning("Dinheiro insuficiente!");
+            Debug.Log($"[GameManager] Dinheiro insuficiente: {currentMoney} < {cost}");
+            return;
+        }
+
+        if (gridManager == null)
+        {
+            Debug.LogError("[GameManager] gridManager é null!");
+            return;
+        }
+
+        if (gridManager.IsCellOccupied(x, y))
+        {
+            PreviewManager.Instance?.ShowWarning("Célula ocupada!");
+            Debug.Log($"[GameManager] Célula ({x}, {y}) ocupada!");
+            return;
+        }
 
         gridManager.PlaceItem(x, y, itemIndex);
         currentMoney -= cost;
         UpdateMoneyUI();
+
+        Debug.Log($"[GameManager] Loja colocada com sucesso em ({x}, {y})! Dinheiro: {currentMoney}");
     }
 
     public void SetSelectedItem(int index)
@@ -85,55 +122,38 @@ public class GameManager : MonoBehaviour
     {
         if (moneyText != null)
         {
-            moneyText.text = $"${currentMoney}"; // SÓ OS NÚMEROS
+            moneyText.text = $"${currentMoney}";
         }
     }
 
     private IEnumerator ShowMoneyGainEffect(int amount)
     {
-        // === CRIA ÍCONE UPCOIN NO CANVAS ===
         GameObject upcoin = Instantiate(upcoinPrefab, hudCanvas.transform);
         upcoin.name = "UpcoinEffect";
 
-        // Usa RectTransform para UI
         RectTransform rt = upcoin.GetComponent<RectTransform>();
         if (rt == null) rt = upcoin.AddComponent<RectTransform>();
 
-        // Posiciona no centro do MoneyText
         rt.anchoredPosition = Vector2.zero;
         rt.localScale = Vector3.one * upcoinScale;
-        rt.anchorMin = new Vector2(0.5f, 0.5f);
-        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
         rt.pivot = new Vector2(0.5f, 0.5f);
 
-        // Aplica transparência
         Image img = upcoin.GetComponent<Image>();
-        if (img == null)
-        {
-            SpriteRenderer sr = upcoin.GetComponent<SpriteRenderer>();
-            if (sr != null)
-            {
-                Color c = sr.color;
-                c.a = upcoinAlpha;
-                sr.color = c;
-            }
-        }
-        else
+        if (img != null)
         {
             Color c = img.color;
             c.a = upcoinAlpha;
             img.color = c;
         }
 
-        // === CRIA TEXTO FLUTUANTE ===
         GameObject textObj = new GameObject("GainText");
         textObj.transform.SetParent(hudCanvas.transform);
 
         RectTransform textRt = textObj.AddComponent<RectTransform>();
         textRt.anchoredPosition = new Vector2(0, -20);
         textRt.localScale = Vector3.one;
-        textRt.anchorMin = new Vector2(0.5f, 0.5f);
-        textRt.anchorMax = new Vector2(0.5f, 0.5f);
+        textRt.anchorMin = textRt.anchorMax = new Vector2(0.5f, 0.5f);
         textRt.pivot = new Vector2(0.5f, 0.5f);
 
         TextMeshProUGUI gainText = textObj.AddComponent<TextMeshProUGUI>();
@@ -143,7 +163,6 @@ public class GameManager : MonoBehaviour
         gainText.alignment = TextAlignmentOptions.Center;
         gainText.font = moneyText.font;
 
-        // === ANIMAÇÃO ===
         float elapsed = 0f;
         Vector2 startPos = textRt.anchoredPosition;
         Vector2 endPos = startPos + Vector2.up * floatDistance;
@@ -155,12 +174,10 @@ public class GameManager : MonoBehaviour
 
             textRt.anchoredPosition = Vector2.Lerp(startPos, endPos, t);
 
-            // Fade texto
             Color textColor = gainText.color;
             textColor.a = Mathf.Lerp(1f, 0f, t);
             gainText.color = textColor;
 
-            // Fade ícone
             if (img != null)
             {
                 Color iconColor = img.color;
@@ -171,7 +188,6 @@ public class GameManager : MonoBehaviour
             yield return null;
         }
 
-        // Destroi
         if (upcoin != null) Destroy(upcoin);
         if (textObj != null) Destroy(textObj);
     }
